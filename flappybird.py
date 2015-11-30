@@ -38,13 +38,11 @@ def main():
 
     frame_clock = 0
     score = 0
-    done = paused = False
+    done = False
     while not done:
         clock.tick(FPS)
 
-        # Handle this 'manually'.  If we used pygame.time.set_timer(),
-        # pipe addition would be messed up when paused.
-        if not (paused or frame_clock % msec_to_frames(PipePair.ADD_INTERVAL)):
+        if not frame_clock % msec_to_frames(PipePair.ADD_INTERVAL):
             pp = PipePair(images['pipe-end'], images['pipe-body'])
             pipes.append(pp)
 
@@ -52,16 +50,11 @@ def main():
             if e.type == QUIT or (e.type == KEYUP and e.key == K_ESCAPE):
                 done = True
                 break
-            elif e.type == KEYUP and e.key in (K_PAUSE, K_p):
-                paused = not paused
             elif e.type == MOUSEBUTTONUP or (e.type == KEYUP and
                                              e.key in (K_UP,
                                                        K_RETURN,
                                                        K_SPACE)):
                 bird.msec_to_climb = Bird.CLIMB_DURATION
-
-        if paused:
-            continue  # don't draw anything
 
         # check for collisions
         pipe_collision = any(p.collides_with(bird) for p in pipes)

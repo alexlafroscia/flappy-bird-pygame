@@ -2,6 +2,8 @@ import os
 import pygame
 from game_state import FPS
 
+from pygame.locals import *
+
 
 def load_images():
     """Load all images required by the game and return a dict of them.
@@ -61,3 +63,18 @@ def msec_to_frames(milliseconds, fps=FPS):
     fps: The framerate to use for conversion.  Default: FPS.
     """
     return fps * milliseconds / 1000.0
+
+
+def get_action_from_event(event):
+    """
+    Get the action based on the event
+
+    Returns:
+        string: 'QUIT' or 'FLAP'
+    """
+    if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
+        return 'QUIT'
+    if event.type == MOUSEBUTTONUP:
+        return 'FLAP'
+    if event.type == KEYUP and (event.key in (K_UP, K_RETURN, K_SPACE)):
+        return 'FLAP'

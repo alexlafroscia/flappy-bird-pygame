@@ -3,6 +3,7 @@ import math
 import pygame
 from pygame.locals import *
 
+from game_state import WIN_HEIGHT
 from util import frames_to_msec
 
 
@@ -81,6 +82,14 @@ class Bird(pygame.sprite.Sprite):
             self.msec_to_climb -= frames_to_msec(delta_frames)
         else:
             self.y += Bird.SINK_SPEED * frames_to_msec(delta_frames)
+
+    def check_collisions(self, pipes):
+        """
+        Check if the bird has collided with a pipe or any of the boundaries
+        """
+        pipe_collision = any(p.collides_with(self) for p in pipes)
+        return pipe_collision or (
+            0 >= self.y or self.y >= WIN_HEIGHT - Bird.HEIGHT)
 
     @property
     def image(self):

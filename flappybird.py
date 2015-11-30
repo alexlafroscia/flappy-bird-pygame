@@ -10,7 +10,7 @@ from pygame.locals import *
 from game_state import FPS, WIN_HEIGHT, WIN_WIDTH
 from bird import Bird
 from pipe import PipePair
-from util import load_images, msec_to_frames
+from util import load_images, msec_to_frames, get_action_from_event
 
 
 def main():
@@ -46,19 +46,16 @@ def main():
             pp = PipePair(images['pipe-end'], images['pipe-body'])
             pipes.append(pp)
 
-        for e in pygame.event.get():
-            if e.type == QUIT or (e.type == KEYUP and e.key == K_ESCAPE):
+        for event in pygame.event.get():
+            action = get_action_from_event(event)
+            if action == 'QUIT':
                 done = True
                 break
-            elif e.type == MOUSEBUTTONUP or (e.type == KEYUP and
-                                             e.key in (K_UP,
-                                                       K_RETURN,
-                                                       K_SPACE)):
+            elif action == 'FLAP':
                 bird.msec_to_climb = Bird.CLIMB_DURATION
 
         # check for collisions
-        pipe_collision = any(p.collides_with(bird) for p in pipes)
-        if pipe_collision or 0 >= bird.y or bird.y >= WIN_HEIGHT - Bird.HEIGHT:
+        if bird.check_collisions(pipes):
             done = True
 
         for x in (0, WIN_WIDTH / 2):

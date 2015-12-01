@@ -21,69 +21,68 @@ def main():
     """
 
     pygame.init()
-
     display_surface = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
     pygame.display.set_caption('Pygame Flappy Bird')
-
-    clock = pygame.time.Clock()
     score_font = pygame.font.SysFont(None, 32, bold=True)  # default font
     images = load_images()
+    active = True
 
-    # the bird stays in the same x position, so bird.x is a constant
-    # center bird on screen
-    bird = Bird(50, int(WIN_HEIGHT / 2 - Bird.HEIGHT / 2), 2,
-                (images['bird-wingup'], images['bird-wingdown']))
+    while active:
+        clock = pygame.time.Clock()
+        bird = Bird(50, int(WIN_HEIGHT / 2 - Bird.HEIGHT / 2), 2,
+                    (images['bird-wingup'], images['bird-wingdown']))
+        pipes = deque()
+        frame_clock = 0
+        score = 0
+        done = False
+        while not done:
+            clock.tick(FPS)
 
-    pipes = deque()
+            if not frame_clock % msec_to_frames(PipePair.ADD_INTERVAL):
+                pp = PipePair(images['pipe-end'], images['pipe-body'])
+                pipes.append(pp)
 
-    frame_clock = 0
-    score = 0
-    done = False
-    while not done:
-        clock.tick(FPS)
+            for event in pygame.event.get():
+                action = get_action_from_event(event)
+                if action == 'QUIT':
+                    done = True
+                    active = False
+                    break
+                elif action == 'FLAP':
+                    bird.msec_to_climb = Bird.CLIMB_DURATION
 
-        if not frame_clock % msec_to_frames(PipePair.ADD_INTERVAL):
-            pp = PipePair(images['pipe-end'], images['pipe-body'])
-            pipes.append(pp)
-
-        for event in pygame.event.get():
-            action = get_action_from_event(event)
-            if action == 'QUIT':
+            # check for collisions
+            if bird.check_collisions(pipes):
                 done = True
-                break
-            elif action == 'FLAP':
-                bird.msec_to_climb = Bird.CLIMB_DURATION
 
-        # check for collisions
-        if bird.check_collisions(pipes):
-            done = True
+            for x in (0, WIN_WIDTH / 2):
+                display_surface.blit(images['background'], (x, 0))
 
-        for x in (0, WIN_WIDTH / 2):
-            display_surface.blit(images['background'], (x, 0))
+            while pipes and not pipes[0].visible:
+                pipes.popleft()
 
-        while pipes and not pipes[0].visible:
-            pipes.popleft()
+            for p in pipes:
+                p.update()
+                display_surface.blit(p.image, p.rect)
 
-        for p in pipes:
-            p.update()
-            display_surface.blit(p.image, p.rect)
+            bird.update()
+            display_surface.blit(bird.image, bird.rect)
 
-        bird.update()
-        display_surface.blit(bird.image, bird.rect)
+            # update and display score
+            for p in pipes:
+                if p.x + PipePair.WIDTH < bird.x and not p.score_counted:
+                    score += 1
+                    p.score_counted = True
 
-        # update and display score
-        for p in pipes:
-            if p.x + PipePair.WIDTH < bird.x and not p.score_counted:
-                score += 1
-                p.score_counted = True
+            score_surface = score_font.render(str(score), True,
+                                              (255, 255, 255))
+            score_x = WIN_WIDTH / 2 - score_surface.get_width() / 2
+            display_surface.blit(score_surface,
+                                 (score_x, PipePair.PIECE_HEIGHT))
 
-        score_surface = score_font.render(str(score), True, (255, 255, 255))
-        score_x = WIN_WIDTH / 2 - score_surface.get_width() / 2
-        display_surface.blit(score_surface, (score_x, PipePair.PIECE_HEIGHT))
-
-        pygame.display.flip()
-        frame_clock += 1
-    print('Game over! Score: %i' % score)
+            pygame.display.flip()
+            frame_clock += 1
+        print('Game over! Score: %i' % score)
     pygame.quit()
 
 

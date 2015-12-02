@@ -16,6 +16,13 @@ def get_pipe_middle(pipe):
     return pipe.top_height_px + (gap_height / 2)
 
 
+def get_first(array, default=None):
+    if array:
+        for item in array:
+            return item
+    return default
+
+
 class Action(Enum):
     quit = 1
     flap = 2
@@ -84,10 +91,14 @@ class GameState(object):
     last_state = None
 
     def __init__(self, bird, pipes):
-        closest_pipe = pipes[0]
+        closest_pipe = get_first(pipes)
         self.bird_state_y = bird.y
-        self.pipe_middle = get_pipe_middle(closest_pipe)
-        self.pipe_distance = closest_pipe.x - bird.x
+        if closest_pipe is not None:
+            self.pipe_middle = get_pipe_middle(closest_pipe)
+            self.pipe_distance = closest_pipe.x - bird.x
+        else:
+            self.pipe_middle = None
+            self.pipe_distance = None
 
     def __eq__(self, other):
         return hash(self) == hash(other)

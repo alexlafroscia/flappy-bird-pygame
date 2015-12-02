@@ -91,6 +91,9 @@ class Bird(pygame.sprite.Sprite):
         return pipe_collision or (
             0 >= self.y or self.y >= WIN_HEIGHT - Bird.HEIGHT)
 
+    def flap(self):
+        self.msec_to_climb = Bird.CLIMB_DURATION
+
     @property
     def image(self):
         """Get a Surface containing this bird's image.

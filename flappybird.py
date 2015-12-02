@@ -7,10 +7,12 @@ from collections import deque
 import pygame
 from pygame.locals import *
 
-from game_state import FPS, WIN_HEIGHT, WIN_WIDTH
+from game_state import GameState, Action, FPS, WIN_HEIGHT, WIN_WIDTH
 from bird import Bird
 from pipe import PipePair
 from util import load_images, msec_to_frames, get_action_from_event
+
+PICK_ACTION_EVERY = 1
 
 
 def main():
@@ -25,6 +27,7 @@ def main():
     pygame.display.set_caption('Pygame Flappy Bird')
     score_font = pygame.font.SysFont(None, 32, bold=True)  # default font
     images = load_images()
+    scores = list()
     active = True
 
     while active:
@@ -36,24 +39,29 @@ def main():
         score = 0
         done = False
         while not done:
+            collision = False
+            action_on_this_tick = frame_clock % PICK_ACTION_EVERY == 0
+
             clock.tick(FPS)
 
             if not frame_clock % msec_to_frames(PipePair.ADD_INTERVAL):
                 pp = PipePair(images['pipe-end'], images['pipe-body'])
                 pipes.append(pp)
 
+            current_state = GameState(bird, pipes)
+
+            # TODO: Get the action from this state here
+            action = None
             for event in pygame.event.get():
                 action = get_action_from_event(event)
-                if action == 'QUIT':
+                if action is Action.quit:
                     done = True
                     active = False
                     break
-                elif action == 'FLAP':
-                    bird.msec_to_climb = Bird.CLIMB_DURATION
-
-            # check for collisions
-            if bird.check_collisions(pipes):
-                done = True
+            if not action and action_on_this_tick:
+                action = current_state.max_value_action
+                if action is Action.flap:
+                    bird.flap()
 
             for x in (0, WIN_WIDTH / 2):
                 display_surface.blit(images['background'], (x, 0))
@@ -68,11 +76,28 @@ def main():
             bird.update()
             display_surface.blit(bird.image, bird.rect)
 
-            # update and display score
-            for p in pipes:
-                if p.x + PipePair.WIDTH < bird.x and not p.score_counted:
-                    score += 1
-                    p.score_counted = True
+            if bird.check_collisions(pipes):
+                collision = True
+                done = True
+
+            if action_on_this_tick:
+                # Get the value for the reward
+                if active and collision:
+                    reward = -1000
+                elif active and not collision:
+                    reward = 1
+
+                # Get the next state and update the utility value for the
+                # current one
+                next_state = GameState(bird, pipes)
+                with current_state.take_action(action) as u:
+                    u.update_utility_value(next_state, reward)
+
+                # update and display score
+                for p in pipes:
+                    if p.x + PipePair.WIDTH < bird.x and not p.score_counted:
+                        score += 1
+                        p.score_counted = True
 
             score_surface = score_font.render(str(score), True,
                                               (255, 255, 255))
@@ -82,7 +107,9 @@ def main():
 
             pygame.display.flip()
             frame_clock += 1
-        print('Game over! Score: %i' % score)
+        scores.append(score)
+        print('Game #{}:\t{}'.format(len(scores), score))
+    print('Best score: %i' % max(scores))
     pygame.quit()
 
 

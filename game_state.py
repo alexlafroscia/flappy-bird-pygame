@@ -7,6 +7,8 @@ FPS = 60
 WIN_HEIGHT = 512
 WIN_WIDTH = 284 * 2     # BG image size: 284x512 px; tiled twice
 
+EXPLORATION_CONSTANT = 30
+
 
 def get_pipe_middle(pipe):
     """
@@ -68,8 +70,14 @@ class StateWithAction(object):
 
     def update_utility_value(self, next_state, reward):
         alpha = 1 / self.count
-        gamma = .4
-        q_sample = reward + (gamma * next_state.max_value)
+        gamma = .9
+
+        # Get the exploration modifier
+        with next_state.take_action(next_state.max_value_action) as u:
+            count = u.count
+        modifier = EXPLORATION_CONSTANT / count
+
+        q_sample = reward + (gamma * (next_state.max_value + modifier))
         old_value = self.utility_value
         self.utility_value = (1 - alpha) * old_value + alpha * q_sample
 

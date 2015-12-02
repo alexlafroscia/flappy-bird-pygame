@@ -1,6 +1,6 @@
 import os
 import pygame
-from game_state import FPS
+from game_state import Action, FPS
 
 from pygame.locals import *
 
@@ -73,8 +73,4 @@ def get_action_from_event(event):
         string: 'QUIT' or 'FLAP'
     """
     if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
-        return 'QUIT'
-    if event.type == MOUSEBUTTONUP:
-        return 'FLAP'
-    if event.type == KEYUP and (event.key in (K_UP, K_RETURN, K_SPACE)):
-        return 'FLAP'
+        return Action.quit

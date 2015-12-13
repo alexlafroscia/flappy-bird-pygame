@@ -12,7 +12,7 @@ from bird import Bird
 from pipe import PipePair
 from util import load_images, msec_to_frames, get_action_from_event
 
-PICK_ACTION_EVERY = 1
+PICK_ACTION_EVERY = 20
 
 
 def main():
@@ -37,27 +37,53 @@ def main():
         pipes = deque()
         frame_clock = 0
         score = 0
-        done = False
-        while not done:
-            collision = False
+
+        # Current state
+        current_state = None
+        action = None
+        reward = 0
+        collision = False
+        while True:
             action_on_this_tick = frame_clock % PICK_ACTION_EVERY == 0
 
             clock.tick(FPS)
+
+            if action_on_this_tick or collision:
+                next_state = GameState(bird, pipes)
+
+                # Update the values for the last state (current_state)
+                if (current_state is not None and action is not None):
+                    # Get the value for the reward
+                    if collision:
+                        reward = -10000
+                    elif active and not collision:
+                        reward = PICK_ACTION_EVERY
+
+                    # Log current state
+                    with current_state.take_action(action) as u:
+                        u.update_utility_value(next_state, reward)
+
+                    # Now that we have updated the state, quit the game after a
+                    # collision
+                    if collision:
+                        break
+
+                    # Reset the action
+                    action = None
+
+                # The "next" state will by the "current" state next time around
+                current_state = next_state
 
             if not frame_clock % msec_to_frames(PipePair.ADD_INTERVAL):
                 pp = PipePair(images['pipe-end'], images['pipe-body'])
                 pipes.append(pp)
 
-            current_state = GameState(bird, pipes)
-
-            # TODO: Get the action from this state here
-            action = None
+            # Handle the user quitting the game
             for event in pygame.event.get():
                 action = get_action_from_event(event)
                 if action is Action.quit:
-                    done = True
-                    active = False
-                    break
+                    exit()
+
             if not action and action_on_this_tick:
                 action = current_state.max_value_action
                 if action is Action.flap:
@@ -78,26 +104,12 @@ def main():
 
             if bird.check_collisions(pipes):
                 collision = True
-                done = True
 
-            if action_on_this_tick:
-                # Get the value for the reward
-                if active and collision:
-                    reward = -1000
-                elif active and not collision:
-                    reward = 1
-
-                # Get the next state and update the utility value for the
-                # current one
-                next_state = GameState(bird, pipes)
-                with current_state.take_action(action) as u:
-                    u.update_utility_value(next_state, reward)
-
-                # update and display score
-                for p in pipes:
-                    if p.x + PipePair.WIDTH < bird.x and not p.score_counted:
-                        score += 1
-                        p.score_counted = True
+            # update and display score
+            for p in pipes:
+                if p.x + PipePair.WIDTH < bird.x and not p.score_counted:
+                    score += 1
+                    p.score_counted = True
 
             score_surface = score_font.render(str(score), True,
                                               (255, 255, 255))
